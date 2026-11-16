@@ -1,0 +1,23 @@
+This file is part of the project-reforged-linux Project.
+License: GPL-3.0-or-later. Contact: project-reforged-linux@trinity2k.net
+
+Project Reforged Linux Launcher
+Copyright (c) 2026 The Augra Project
+
+Additional terms under section 7(b) of the GNU General Public License,
+version 3. Anyone who conveys this program or a work based on it, modified or
+not, must keep the following notices, both in the README (or the work's
+equivalent) and in the credits or About page the program shows:
+
+1. Attribution
+
+   Based on the Project Reforged Linux Launcher by the Augra Project
+   (https://github.com/augra-project), the makers of luducat
+   (https://github.com/luducat/luducat) and dosbox-automation
+   (https://github.com/dosbox-automation/dosbox-automation).
+
+2. The original game files
+
+   The original N-Gage game files of The Elder Scrolls Travels: Shadowkey
+   belong to ZeniMax Media Inc. They are not part of this program, and this
+   license grants no rights to them. Every player brings their own copy.
