@@ -51,3 +51,8 @@ def test_an_oversized_answer_is_refused_even_when_it_is_valid() -> None:
     body = json.dumps({"tag_name": "v0.2.0", "padding": "x" * (256 * 1024)}).encode()
     with pytest.raises(UpdateCheckError, match="larger"):
         latest_release(FakeTransport(response(200, body)))
+
+
+def test_nesting_too_deep_for_json_is_a_bad_answer() -> None:
+    with pytest.raises(UpdateCheckError):
+        latest_release(FakeTransport(response(200, b"[" * 60_000)))

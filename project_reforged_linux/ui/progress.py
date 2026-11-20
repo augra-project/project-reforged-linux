@@ -33,7 +33,8 @@ FRAME_MS = 30
 
 
 class ProgressLine(QWidget):
-    """One text line high: a fraction fills it in gold, busy runs stripes through it."""
+    """One text line high: a fraction fills it in gold and reads "40%" and nothing else;
+    busy runs stripes through it under the step's words."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -62,13 +63,11 @@ class ProgressLine(QWidget):
     def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
         return QSize(60, self.sizeHint().height())
 
-    def set_progress(self, fraction: float, text: str) -> None:
+    def set_progress(self, fraction: float) -> None:
         # The chained comparison is also false for NaN.
         if not 0.0 <= fraction <= 1.0:
             raise ValueError(f"progress must be between 0 and 1, got {fraction}")
-        self._fraction, self._text = fraction, text
-        self._timer.stop()
-        self.update()
+        self._show(fraction, f"{round(fraction * 100)}%")
 
     def set_busy(self, text: str) -> None:
         self._fraction, self._text = None, text
@@ -77,7 +76,12 @@ class ProgressLine(QWidget):
         self.update()
 
     def set_idle(self, text: str = "") -> None:
-        self.set_progress(0.0, text)
+        self._show(0.0, text)
+
+    def _show(self, fraction: float, text: str) -> None:
+        self._fraction, self._text = fraction, text
+        self._timer.stop()
+        self.update()
 
     def showEvent(self, event: QShowEvent) -> None:  # noqa: N802 (Qt's name)
         super().showEvent(event)

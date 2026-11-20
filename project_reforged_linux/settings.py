@@ -14,6 +14,7 @@ from typing import Any
 
 from kista.fileops import write_atomic
 
+from project_reforged_linux.builds import Build
 from project_reforged_linux.runtimes import Mode
 
 __all__ = ["SETTINGS_JSON", "DesktopChoice", "LauncherSettings", "Loaded", "load", "save"]
@@ -22,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 SETTINGS_JSON = "settings.json"
 FORMAT = 1
-_FLAGS = ("check_game_updates", "check_launcher_updates", "first_run_done")
+# Each flag with its default, used when an older file does not have it yet.
+_FLAGS = {"check_game_updates": True, "check_launcher_updates": False, "first_run_done": False,
+          "sync_saves": True}
 
 
 class DesktopChoice(StrEnum):
@@ -34,14 +37,16 @@ class DesktopChoice(StrEnum):
 @dataclass(frozen=True, slots=True)
 class LauncherSettings:
     game_files: str | None = None
-    # Both startup checks stay off until the player turns them on.
-    check_game_updates: bool = False
+    # His manifest at start: on; GitHub only when the player says so.
+    check_game_updates: bool = True
     check_launcher_updates: bool = False
     desktop: DesktopChoice = DesktopChoice.ASK
     first_run_done: bool = False
     # Automatic unless the player picked a runtime on purpose.
     runtime_mode: Mode = Mode.AUTO
     runtime_wine: str | None = None  # the picked wine binary, for Mode.CHOSEN only
+    game_build: Build | None = None  # None: the best build that runs here
+    sync_saves: bool = True
 
     def __post_init__(self) -> None:
         for name in ("game_files", "runtime_wine"):
@@ -66,8 +71,8 @@ def _from_dict(data: Any) -> LauncherSettings:
                                    or not game_files.startswith("/")):
         raise ValueError("game_files must be an absolute path")
     flags = {}
-    for name in _FLAGS:
-        value = data.get(name, False)
+    for name, default in _FLAGS.items():
+        value = data.get(name, default)
         if not isinstance(value, bool):
             raise ValueError(f"{name} must be true or false")
         flags[name] = value
@@ -79,9 +84,14 @@ def _from_dict(data: Any) -> LauncherSettings:
     runtime_wine = data.get("runtime_wine")
     if runtime_wine is not None and not isinstance(runtime_wine, str):
         raise ValueError("runtime_wine must be a path")
+    build = data.get("game_build")
+    if build is not None and not isinstance(build, str):
+        raise ValueError("game_build must be a word")
+    game_build = Build.from_key(build) if build is not None else None
     # LauncherSettings checks the rest: absolute paths, and the path only with Mode.CHOSEN.
     return LauncherSettings(game_files=game_files, desktop=DesktopChoice(desktop),
-                            runtime_mode=runtime_mode, runtime_wine=runtime_wine, **flags)
+                            runtime_mode=runtime_mode, runtime_wine=runtime_wine,
+                            game_build=game_build, **flags)
 
 
 def load(config_dir: Path) -> Loaded:
@@ -92,7 +102,8 @@ def load(config_dir: Path) -> Loaded:
         return Loaded(LauncherSettings())
     try:
         return Loaded(_from_dict(json.loads(raw.decode("utf-8"))))
-    except ValueError as error:  # JSONDecodeError and UnicodeDecodeError are ValueErrors
+    # JSONDecodeError and UnicodeDecodeError are ValueErrors; nesting too deep is not.
+    except (ValueError, RecursionError) as error:
         aside = path.with_name(SETTINGS_JSON + ".bad")
         os.replace(path, aside)
         logger.warning("could not read %s (%s); kept as %s", path, error, aside)
@@ -105,5 +116,6 @@ def save(config_dir: Path, settings: LauncherSettings) -> None:
     data = {"format": FORMAT, **asdict(settings)}
     data["desktop"] = settings.desktop.value
     data["runtime_mode"] = settings.runtime_mode.value
+    data["game_build"] = settings.game_build.key if settings.game_build else None
     text = json.dumps(data, indent=2) + "\n"
     write_atomic(config_dir / SETTINGS_JSON, text.encode("utf-8"), mode=0o600)

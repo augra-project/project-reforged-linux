@@ -12,10 +12,11 @@ from pathlib import Path
 import platformdirs
 from kista.fileops import copy_preserving, write_atomic
 
-from project_reforged_linux import APP_ID, APP_NAME
+from project_reforged_linux import APP_ID, APP_NAME, GAME_NAME, LAUNCHER_NAME
 
 __all__ = ["ICON_SIZES", "ICONS_SOURCE", "DesktopTargets", "current_appimage", "desktop_entry",
-           "install", "installed_exec", "quote_exec_arg", "refresh_exec", "remove", "targets"]
+           "install", "installed_exec", "is_gnome", "quote_exec_arg", "refresh_exec", "remove",
+           "targets"]
 
 ICON_SIZES = (16, 24, 32, 48, 64, 128, 256, 512)
 ICONS_SOURCE = Path(__file__).parent / "data" / "icons" / "hicolor"
@@ -44,6 +45,13 @@ def targets() -> DesktopTargets:
     return DesktopTargets(base / "applications", base / "icons" / "hicolor")
 
 
+def is_gnome(env: Mapping[str, str] = os.environ) -> bool:
+    """GNOME needs the installed entry for a dock icon; KDE and others show the window's own."""
+    # Ubuntu sets "ubuntu:GNOME", Pop!_OS "pop:GNOME"; the list is colon-separated.
+    desktops = env.get("XDG_CURRENT_DESKTOP", "")
+    return any(name.strip().upper() == "GNOME" for name in desktops.split(":"))
+
+
 def current_appimage(env: Mapping[str, str] = os.environ) -> Path | None:
     value = env.get("APPIMAGE")
     if not value:
@@ -66,9 +74,9 @@ def desktop_entry(exec_path: Path) -> str:
     return ("[Desktop Entry]\n"
             "Type=Application\n"
             "Version=1.5\n"
-            "Name=Project Reforged Linux Launcher\n"
+            f"Name={LAUNCHER_NAME}\n"
             "GenericName=Game Launcher\n"
-            "Comment=Downloads Dan Whelan's Project Reforged and starts it under Wine\n"
+            f"Comment=Downloads Dan Whelan's {GAME_NAME} and starts it\n"
             f"Exec={quote_exec_arg(str(exec_path))}\n"
             f"Icon={APP_ID}\n"
             "Terminal=false\n"

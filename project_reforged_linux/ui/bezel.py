@@ -5,7 +5,7 @@
 """The bezel: one painter for the gold frame around buttons, boxes and the progress line.
 
 A style is data (frame layers, fill, colours, height); RUN GAME and Options are the
-same button class with a different style (Stefan, 2026-11-15).
+same button class with a different style.
 """
 
 import math
@@ -16,6 +16,7 @@ from functools import cache
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor,
+    QFontMetricsF,
     QImage,
     QLinearGradient,
     QPainter,
@@ -37,8 +38,11 @@ ICON_GAP = 8
 PADDING = 14
 PANEL_PADDING = (14, 10)
 PRESSED_DARKER = 118
-HOVER_LIGHTER = 112
-# The gold is worked metal, not flat paint (Look review 2): lit from above, a little from the
+# A hovered button warms toward the highlight gold and its frame glints; lightening alone
+# did not show on the dark leather.
+HOVER_GLOW = 0.10
+HOVER_FRAME = 110
+# The gold is worked metal, not flat paint: lit from above, a little from the
 # left, and flecked by a soft grain blended over it.
 BEVEL = 140  # the lit edge this much lighter, the far edge this much darker (percent)
 GRAIN_OPACITY = 0.6
@@ -64,6 +68,12 @@ def _grain() -> QImage:
     return image
 
 
+def _toward(colour: QColor, target: QColor, share: float) -> QColor:
+    return QColor.fromRgbF(*(a + share * (b - a) for a, b in (
+        (colour.redF(), target.redF()), (colour.greenF(), target.greenF()),
+        (colour.blueF(), target.blueF()))))
+
+
 def _rounded(rect: QRectF, inset: float, radius: float) -> QPainterPath:
     path = QPainterPath()
     r = max(radius - inset, 0.0)
@@ -87,7 +97,7 @@ class BezelStyle:
         return sum(width for _, width in self.layers)
 
 
-# Thick buttons in the boxes' frame (Look review 2, Stefan, 2026-11-16).
+# Thick buttons in the boxes' frame.
 LEATHER = BezelStyle(theme.BEZEL_FRAME, theme.LEATHER_TOP, theme.LEATHER, height=40)
 SMALL = replace(LEATHER, height=32)
 GOLD = BezelStyle(theme.BEZEL_FRAME, theme.GOLD_TOP, theme.GOLD_BOTTOM, radius=3.0,
@@ -108,7 +118,8 @@ def paint_bezel(painter: QPainter, rect: QRectF, style: BezelStyle, *,
     if pressed:
         top, bottom = top.darker(PRESSED_DARKER), bottom.darker(PRESSED_DARKER)
     elif hovered:
-        top, bottom = top.lighter(HOVER_LIGHTER), bottom.lighter(HOVER_LIGHTER)
+        glow = QColor(theme.GOLD_HI)
+        top, bottom = _toward(top, glow, HOVER_GLOW), _toward(bottom, glow, HOVER_GLOW)
     top.setAlpha(style.fill_alpha)
     bottom.setAlpha(style.fill_alpha)
     gradient = QLinearGradient(inner.topLeft(), inner.bottomLeft())
@@ -127,6 +138,8 @@ def paint_bezel(painter: QPainter, rect: QRectF, style: BezelStyle, *,
         half = offset + width / 2
         radius = max(style.radius - half, 0.0)
         base = QColor(colour)
+        if 0 < index < last and hovered and not pressed:
+            base = base.lighter(HOVER_FRAME)
         if 0 < index < last:  # the dark outlines stay clean; the gold between them is lit
             light = QLinearGradient(lit, far)
             light.setColorAt(0.0, base.lighter(BEVEL))
@@ -182,10 +195,11 @@ class BezelButton(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         if not self.isEnabled():
-            painter.setOpacity(0.45)
+            painter.setOpacity(theme.DISABLED_OPACITY)
         pressed = self.isDown()
+        # Qt keeps underMouse() true on a disabled button; a greyed one does not answer.
         paint_bezel(painter, QRectF(self.rect()), self.bezel, pressed=pressed,
-                    hovered=self.underMouse())
+                    hovered=self.isEnabled() and self.underMouse())
         shift = 1.0 if pressed else 0.0
         x = (self.width() - self._content_width()) / 2
         if self._icon_name is not None:
@@ -195,8 +209,9 @@ class BezelButton(QPushButton):
             x += ICON_SIZE + ICON_GAP
         painter.setFont(self.font())
         painter.setPen(QColor(self.bezel.text))
-        painter.drawText(QRectF(x, shift, self.width() - x, self.height()),
-                         Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.text())
+        # Centred by the capitals, not the font box: its descender room set RUN GAME high.
+        baseline = (self.height() + QFontMetricsF(self.font()).capHeight()) / 2 + shift
+        painter.drawText(QPointF(x, baseline), self.text())
         painter.end()
 
 

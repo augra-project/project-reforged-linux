@@ -19,13 +19,6 @@ Cinzel
     SIL Open Font License 1.1
     Files: project_reforged_linux/data/fonts/cinzel/
 
-Cinzel Decorative
-    https://github.com/google/fonts/tree/main/ofl/cinzeldecorative
-    Copyright (c) 2012 Natanael Gama (info@ndiscovered.com),
-    with Reserved Font Name 'Cinzel'
-    SIL Open Font License 1.1
-    Files: project_reforged_linux/data/fonts/cinzeldecorative/
-
 EB Garamond
     https://github.com/google/fonts/tree/main/ofl/ebgaramond
     Copyright 2017 The EB Garamond Project Authors
@@ -37,7 +30,7 @@ Lucide icons
     https://github.com/lucide-icons/lucide
     Copyright (c) 2026 Lucide Icons and Contributors
     ISC License
-    The icons info and power derive from Feather:
+    The icons info, power and circle-arrow-up derive from Feather:
     Copyright (c) 2013-present Cole Bemis, MIT License
     Files: project_reforged_linux/data/ui-icons/
 
@@ -55,6 +48,18 @@ sjaandi-kista
     https://github.com/shakeyourbunny/sjaandi-kista
     GPL-3.0-or-later
 
+luducat application icon (About dialog, unchanged)
+    https://github.com/luducat/luducat
+    Copyright (c) shakeyourbunny and luducat contributors
+    GPL-3.0-or-later
+    File: project_reforged_linux/data/logos/luducat.svg
+
+dosbox-automation application icon (About dialog, unchanged)
+    https://www.dosbox-automation.org/
+    Copyright (c) the dosbox-automation contributors
+    GPL-2.0-or-later
+    File: project_reforged_linux/data/logos/dosbox-automation.svg
+
 luducat (progress line painting, adapted)
     https://github.com/luducat/luducat
     Copyright (c) shakeyourbunny and luducat contributors
@@ -64,7 +69,7 @@ luducat (progress line painting, adapted)
 ================================================================================
 SIL OPEN FONT LICENSE 1.1
 ================================================================================
-Used by: Cinzel, Cinzel Decorative, EB Garamond
+Used by: Cinzel, EB Garamond
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
@@ -182,7 +187,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ================================================================================
 MIT LICENSE
 ================================================================================
-Used by: platformdirs, and the Feather-derived Lucide icons (info, power)
+Used by: platformdirs, and the Feather-derived Lucide icons (info, power, circle-arrow-up)
 
 The MIT License (MIT) (for the icons listed above)
 

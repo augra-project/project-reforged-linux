@@ -137,8 +137,7 @@ def themed_banner() -> tuple[QWidget, Banner]:
 
 
 def test_banner_groups_emblem_and_words_left_of_centre(qapp) -> None:  # type: ignore[no-untyped-def]
-    # Stefan, 2026-11-15: keyhole and words as one group, set left as in the mockup,
-    # so the tower on the right keeps its sky.
+    # Set left as in the mockup, so the tower on the right keeps its sky.
     _root, banner = themed_banner()
     emblem = banner.findChild(QSvgWidget).geometry()
     mark = banner.findChild(Wordmark).geometry()
@@ -155,13 +154,35 @@ def test_wordmark_is_taller_and_stretched(qapp) -> None:  # type: ignore[no-unty
     plain, stretched = mark.outline(1.0).boundingRect(), mark.outline().boundingRect()
     ratio = (stretched.height() / stretched.width()) / (plain.height() / plain.width())
     assert abs(ratio - STRETCH_Y) < 0.02, ratio
-    # The mockup's letters are visibly taller than Cinzel's own (Look review 1).
+    # The mockup's letters are visibly taller than Cinzel's own.
     assert ratio >= 1.1, ratio
 
 
 def test_wordmark_refuses_empty_stretch(qapp) -> None:  # type: ignore[no-untyped-def]
     with pytest.raises(ValueError):
         Wordmark(theme.load_fonts()).outline(0)
+
+
+def test_a_small_wordmark_is_the_large_one_scaled(qapp) -> None:  # type: ignore[no-untyped-def]
+    fonts = theme.load_fonts()
+    large, small = Wordmark(fonts), Wordmark(fonts, height=50)
+    assert small.height() == 50
+    assert abs(small.width() - large.width() * 50 / large.height()) <= 1
+    # Painted at that scale, not cut off: it matches the large mark shrunk to its size.
+    image = grab(small, small.width(), small.height())
+    shrunk = grab(large, large.width(), large.height()).scaled(
+        small.width(), small.height(), Qt.AspectRatioMode.IgnoreAspectRatio,
+        Qt.TransformationMode.SmoothTransformation)
+    pixels = [(x, y) for x in range(image.width()) for y in range(image.height())]
+    agree = sum(gold_leaning(QColor(image.pixel(x, y))) == gold_leaning(QColor(shrunk.pixel(x, y)))
+                for x, y in pixels)
+    assert agree / len(pixels) > 0.9, agree / len(pixels)
+
+
+@pytest.mark.parametrize("height", [0, -50])
+def test_wordmark_refuses_empty_height(qapp, height: int) -> None:  # type: ignore[no-untyped-def]
+    with pytest.raises(ValueError):
+        Wordmark(theme.load_fonts(), height=height)
 
 
 def rule_image(width: int = 200, height: int = 20) -> QImage:
@@ -235,7 +256,7 @@ def test_subtitle_is_pronounced(qapp) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_reforged_sits_a_little_narrower_under_project(qapp) -> None:  # type: ignore[no-untyped-def]
-    # Stefan, 2026-11-16: REFORGED a touch smaller than PROJECT, not as wide.
+    # REFORGED a touch smaller than PROJECT, not as wide.
     mark = Wordmark(theme.load_fonts())
     image = grab(mark, mark.width(), mark.height())
     empty = image.pixel(0, 0)
@@ -257,7 +278,7 @@ def ink_rows(mark: Wordmark) -> list[bool]:
 
 
 def test_project_and_reforged_sit_close(qapp) -> None:  # type: ignore[no-untyped-def]
-    # Stefan, 2026-11-16: the two lines a bit more together (the gap was 11 rows).
+    # The two lines a bit more together (the gap was 11 rows).
     rows = ink_rows(Wordmark(theme.load_fonts()))
     inked = [y for y, r in enumerate(rows) if r]
     gaps, run = [], 0
@@ -271,3 +292,13 @@ def test_wordmark_has_no_empty_headroom(qapp) -> None:  # type: ignore[no-untype
     rows = ink_rows(Wordmark(theme.load_fonts()))
     first, last = rows.index(True), len(rows) - 1 - rows[::-1].index(True)
     assert first <= 4 and len(rows) - 1 - last <= 6, (first, len(rows) - 1 - last)
+
+
+def test_emblem_top_meets_wordmark_top(qapp) -> None:  # type: ignore[no-untyped-def]
+    # The emblem moves up to the wordmark's top instead of centring
+    # on the taller column of words and subtitle.
+    _root, banner = themed_banner()
+    emblem = banner.findChild(QSvgWidget)
+    mark = banner.findChild(Wordmark)
+    assert abs(emblem.geometry().top() - mark.geometry().top()) <= 1
+    assert emblem.geometry().bottom() < banner.findChild(QLabel, "subtitle").geometry().bottom()

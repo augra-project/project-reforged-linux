@@ -6,10 +6,10 @@ import logging
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QPoint, QRectF, Qt
+from PySide6.QtCore import QByteArray, QPoint, QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QRegion
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QWidget
 
 from project_reforged_linux.ui import theme, widgets
 from project_reforged_linux.ui.assets import FLEURON
@@ -34,7 +34,7 @@ def test_status_row_shows_state_text_and_detail(qapp) -> None:  # type: ignore[n
 
 
 @pytest.mark.parametrize("state, channel", [
-    (State.OK, "green"), (State.ERROR, "red")])
+    (State.OK, "green"), (State.ERROR, "red"), (State.UPDATE, "red")])
 def test_status_icon_takes_the_state_colour(qapp, state: State, channel: str) -> None:  # type: ignore[no-untyped-def]
     row = StatusRow("Project Reforged")
     row.set_state(state, "")
@@ -73,7 +73,7 @@ def reference(width: int, height: int) -> QImage:
     image.fill(QColor(theme.NIGHT))
     painter = QPainter(image)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    QSvgRenderer(str(FLEURON)).render(painter, QRectF(0, 0, width, height))
+    QSvgRenderer(QByteArray(widgets._fleuron_svg())).render(painter, QRectF(0, 0, width, height))
     painter.end()
     return image
 
@@ -124,7 +124,6 @@ def test_fleuron_says_when_art_is_missing(qapp, monkeypatch: pytest.MonkeyPatch,
 
 
 def test_a_row_shows_no_symbol_while_it_checks(qapp) -> None:  # type: ignore[no-untyped-def]
-    # Stefan, 2026-11-16: check first, then a tick or a cross; never a question mark.
     row = StatusRow("Project Reforged")
     assert row.state is State.CHECKING
     icon = row.findChild(QLabel, "statusIcon")
@@ -133,4 +132,65 @@ def test_a_row_shows_no_symbol_while_it_checks(qapp) -> None:  # type: ignore[no
     assert not icon.pixmap().isNull()
     row.set_state(State.CHECKING, "checking...")
     assert icon.pixmap().isNull()
-    assert {s.name for s in State} == {"CHECKING", "OK", "ERROR"}
+    assert {s.name for s in State} == {"CHECKING", "OK", "ERROR", "UPDATE", "NOT_NEEDED"}
+    assert "question" not in State.UPDATE.value[0]
+
+
+def test_detail_is_right_aligned_and_shortened_in_the_middle(qapp) -> None:  # type: ignore[no-untyped-def]
+    text = "~/Projects/augra/.workspace/shadowkey/ngage-files"
+    row = StatusRow("Original game files")
+    row.resize(300, 40)
+    row.set_state(State.OK, text)
+    # Qt holds resize events back until a widget is shown; the window is shown too.
+    row.show()
+    QApplication.processEvents()
+    label = row.findChild(QLabel, "statusDetail")
+    assert label.alignment() & Qt.AlignmentFlag.AlignRight
+    shown = label.text()
+    assert shown != text and "\u2026" in shown
+    assert shown.startswith(text[:3]) and shown.endswith(text[-3:])
+    assert label.fontMetrics().horizontalAdvance(shown) <= label.width()
+    assert row.detail_text() == text, "the full text stays readable for tests and tooltips"
+    row.resize(1000, 40)
+    QApplication.processEvents()
+    assert label.text() == text, "with room again, nothing is cut"
+
+
+def opaque_mean(image: QImage) -> tuple[float, float, float]:
+    pixels = [image.pixelColor(x, y) for x in range(image.width())
+              for y in range(image.height())]
+    solid = [p for p in pixels if p.alpha() > 230]
+    assert solid, "nothing opaque"
+    return tuple(sum(getattr(p, c)() for p in solid) / len(solid)  # type: ignore[return-value]
+                 for c in ("red", "green", "blue"))
+
+
+def test_fleuron_wears_the_guardians_gold(qapp) -> None:  # type: ignore[no-untyped-def]
+    # The fleurons were a brighter, oranger gold than
+    # the Dragon Guardians' aged one beside them.
+    from project_reforged_linux.ui.assets import CORNER_TOP
+
+    fleuron = Fleuron(points=Qt.Edge.RightEdge)
+    image = QImage(fleuron.size() * 4, QImage.Format.Format_ARGB32)
+    image.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(image)
+    painter.scale(4, 4)
+    fleuron.render(painter, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)
+    painter.end()
+    got, want = opaque_mean(image), opaque_mean(QImage(str(CORNER_TOP)))
+    assert max(abs(g - w) for g, w in zip(got, want, strict=True)) <= 20, (got, want)
+
+
+def test_a_row_that_is_not_needed_is_dimmed_like_a_disabled_button(qapp) -> None:  # type: ignore[no-untyped-def]
+    # The Windows Runtime row while a Linux build runs.
+    from PySide6.QtWidgets import QGraphicsOpacityEffect
+
+    row = StatusRow("Windows Runtime")
+    row.set_state(State.NOT_NEEDED, "not needed for the Linux build", tooltip="why")
+    effect = row.graphicsEffect()
+    assert isinstance(effect, QGraphicsOpacityEffect)
+    assert effect.opacity() == pytest.approx(theme.DISABLED_OPACITY)
+    assert row.findChild(QLabel, "statusIcon").pixmap().isNull()
+    assert row.detail_text() == "not needed for the Linux build" and row.toolTip() == "why"
+    row.set_state(State.OK, "Wine 10.0 (system)")
+    assert row.graphicsEffect() is None

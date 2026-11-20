@@ -46,6 +46,6 @@ They belong to ZeniMax Media Inc.; nobody may bundle them with the launcher or
 with a fork of it. Every player brings their own copy.
 
 ---
-project-reforged-linux has been written with the help of tooled assistance,
+Project Reforged Linux Launcher has been written with the help of tooled assistance,
 but has been designed, reviewed and thoroughly tested and signed off by its
 developer.

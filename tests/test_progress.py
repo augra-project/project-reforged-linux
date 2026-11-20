@@ -40,7 +40,7 @@ def test_one_text_line_high(qapp) -> None:  # type: ignore[no-untyped-def]
 
 def test_half_fills_the_left_half(qapp) -> None:  # type: ignore[no-untyped-def]
     line = ProgressLine()
-    line.set_progress(0.5, "")
+    line.set_progress(0.5)
     image = draw(line)
     y = image.height() // 2
     assert gold(image.pixelColor(edge(), y))
@@ -55,7 +55,7 @@ def test_idle_has_no_fill(qapp) -> None:  # type: ignore[no-untyped-def]
 
 def test_text_is_dark_on_gold_and_light_on_the_bar(qapp) -> None:  # type: ignore[no-untyped-def]
     line = ProgressLine()
-    line.set_progress(0.5, "M" * 30)  # wide enough to cross the middle
+    line.set_progress(0.5)  # "50%" sits on the middle, so it crosses the fill's end
     image = draw(line)
     inside = math.ceil(BAR.thickness) + 1  # the frame's dark edge is not text
     rows = range(inside, image.height() - inside)
@@ -78,7 +78,7 @@ def test_busy_fills_all_and_animates_only_while_shown(qapp) -> None:  # type: ig
     image = draw(line)
     y = image.height() // 2
     assert gold(image.pixelColor(edge(), y)) and gold(image.pixelColor(WIDTH - edge(), y))
-    line.set_progress(0.3, "30 %")
+    line.set_progress(0.3)
     assert not line.animating()
     line.set_busy("Downloading")
     line.hide()
@@ -88,4 +88,20 @@ def test_busy_fills_all_and_animates_only_while_shown(qapp) -> None:  # type: ig
 @pytest.mark.parametrize("fraction", [-0.01, 1.01, float("nan")])
 def test_refuses_out_of_range(qapp, fraction: float) -> None:  # type: ignore[no-untyped-def]
     with pytest.raises(ValueError):
-        ProgressLine().set_progress(fraction, "")
+        ProgressLine().set_progress(fraction)
+
+
+@pytest.mark.parametrize("fraction, shown", [(0.4, "40%"), (0.333, "33%"), (0.0, "0%"),
+                                             (1.0, "100%")])
+def test_known_progress_shows_only_its_percentage(qapp, fraction: float, shown: str) -> None:  # type: ignore[no-untyped-def]
+    line = ProgressLine()
+    line.set_progress(fraction)
+    assert line.text() == shown
+
+
+def test_busy_and_idle_keep_their_words(qapp) -> None:  # type: ignore[no-untyped-def]
+    line = ProgressLine()
+    line.set_busy("Installing")
+    assert line.text() == "Installing"
+    line.set_idle()
+    assert line.text() == "" and line.fraction == 0.0

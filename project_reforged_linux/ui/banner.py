@@ -22,16 +22,17 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from project_reforged_linux.ui import theme
 from project_reforged_linux.ui.assets import EMBLEM
 
-__all__ = ["RULE_OVERHANG", "STRETCH_Y", "WORDMARK", "WORDMARK_HEIGHT", "Banner", "Wordmark",
-           "paint_rule", "text_outline", "wordmark_font"]
+__all__ = ["RULE_OVERHANG", "STRETCH_Y", "SUBTITLE", "WORDMARK", "WORDMARK_HEIGHT", "Banner",
+           "Wordmark", "paint_rule", "text_outline", "wordmark_font"]
 
 WORDMARK = ("PROJECT", "REFORGED")
+SUBTITLE = "Linux Launcher"
 EMBLEM_SIZE = 150
 WORDMARK_HEIGHT = 150
 STRETCH_Y = 1.15  # the mockup's letters are taller than Cinzel's own proportions
-# Each line's size as a share of the height; REFORGED a touch smaller (Stefan, 2026-11-16).
+# Each line's size as a share of the height; REFORGED a touch smaller.
 UPPER_SIZE, LOWER_SIZE = 0.50, 0.28
-# Baselines as shares of the height; REFORGED close under PROJECT (Stefan, 2026-11-16).
+# Baselines as shares of the height; REFORGED close under PROJECT.
 UPPER_BASELINE, LOWER_BASELINE = 0.50, 0.88
 SHADOW = (2.5, 3.0)
 DIAMOND = 5.0  # half the diagonal, logical px
@@ -67,13 +68,19 @@ def text_outline(font: QFont, baseline: QPointF, text: str) -> QPainterPath:
 class Wordmark(QWidget):
     """The two words as painted paths, so the spelling is exact in any font state."""
 
-    def __init__(self, fonts: theme.Fonts, parent: QWidget | None = None) -> None:
+    def __init__(self, fonts: theme.Fonts, parent: QWidget | None = None, *,
+                 height: int | None = None) -> None:
+        """`height` draws the whole mark, shadow and outline included, scaled to that height."""
         super().__init__(parent)
         self._family = fonts.heading
         # Exactly as big as the ink and its shadow: no empty headroom from the font's ascent,
         # and the banner can group the words tightly with the emblem.
         box = self.outline().boundingRect()
-        self.setFixedSize(round(box.right() + SHADOW[0]) + 2, round(box.bottom() + SHADOW[1]) + 2)
+        width, full = box.right() + SHADOW[0] + 2, box.bottom() + SHADOW[1] + 2
+        if height is not None and height <= 0:
+            raise ValueError(f"wordmark height must be positive, got {height}")
+        self._scale = 1.0 if height is None else height / full
+        self.setFixedSize(round(width * self._scale), round(full * self._scale))
 
     def outline(self, stretch: float = STRETCH_Y) -> QPainterPath:
         """The two lines laid out at WORDMARK_HEIGHT, stretched, with their ink at the top left."""
@@ -100,6 +107,7 @@ class Wordmark(QWidget):
     def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802 (Qt's name)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.scale(self._scale, self._scale)
         path = self.outline()
         shadow = QPainterPath(path)
         shadow.translate(*SHADOW)
@@ -143,18 +151,19 @@ class Banner(QWidget):
         emblem = QSvgWidget(str(EMBLEM))
         emblem.setFixedSize(EMBLEM_SIZE, EMBLEM_SIZE)
         self._mark = Wordmark(fonts)
-        self._subtitle = QLabel("Linux Launcher")
+        self._subtitle = QLabel(SUBTITLE)
         self._subtitle.setObjectName("subtitle")
         words = QVBoxLayout()
         words.setSpacing(0)
         words.addWidget(self._mark)
         words.addWidget(self._subtitle, 0, Qt.AlignmentFlag.AlignHCenter)
-        # Emblem and words as one group, set left (Stefan, 2026-11-15) so the tower on
+        # Emblem and words as one group, set left so the tower on
         # the right keeps its sky; the free space splits one to two.
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.addStretch(1)
-        row.addWidget(emblem, 0, Qt.AlignmentFlag.AlignVCenter)
+        # The emblem's top on the wordmark's, not centred on the taller column.
+        row.addWidget(emblem, 0, Qt.AlignmentFlag.AlignTop)
         row.addSpacing(14)
         row.addLayout(words)
         row.addStretch(2)

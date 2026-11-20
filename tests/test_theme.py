@@ -6,19 +6,26 @@ import re
 
 import pytest
 from PySide6.QtCore import QtMsgType, qInstallMessageHandler
-from PySide6.QtWidgets import QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QLabel,
+    QListWidget,
+    QPushButton,
+    QRadioButton,
+    QWidget,
+)
 
 from project_reforged_linux.ui import assets, theme
 
 
 def test_fonts_load(qapp) -> None:  # type: ignore[no-untyped-def]
     fonts = theme.load_fonts()
-    assert (fonts.heading, fonts.decorative, fonts.text) == (
-        "Cinzel", "Cinzel Decorative", "EB Garamond")
+    assert (fonts.heading, fonts.text) == ("Cinzel", "EB Garamond")
 
 
-def test_stylesheet_has_no_holes(qapp) -> None:  # type: ignore[no-untyped-def]
-    qss = theme.stylesheet(theme.load_fonts())
+@pytest.mark.parametrize("dialog", [False, True])
+def test_stylesheet_has_no_holes(qapp, dialog: bool) -> None:  # type: ignore[no-untyped-def]
+    qss = theme.dialog_stylesheet() if dialog else theme.stylesheet(theme.load_fonts())
     assert "{" in qss and not re.search(r"\{[a-z_]+\}", qss)
 
 
@@ -32,8 +39,11 @@ def test_qt_parses_the_stylesheet(qapp) -> None:  # type: ignore[no-untyped-def]
     previous = qInstallMessageHandler(collect)
     try:
         root = QWidget()
-        root.setStyleSheet(theme.stylesheet(theme.load_fonts()))
-        for child in (QPushButton("Run", root), QLabel("text", root)):
+        theme.apply(root, theme.load_fonts(), dialog=True)
+        listing = QListWidget(root)
+        listing.addItem("Wine 10.0")
+        for child in (QPushButton("Run", root), QLabel("text", root), QCheckBox("c", root),
+                      QRadioButton("r", root), listing):
             child.ensurePolished()
         root.ensurePolished()
     finally:
@@ -45,6 +55,18 @@ def test_sizes_come_from_one_base(qapp) -> None:  # type: ignore[no-untyped-def]
     small = theme.stylesheet(theme.load_fonts(), base_pt=10)
     large = theme.stylesheet(theme.load_fonts(), base_pt=20)
     assert "font-size: 10pt" in small and "font-size: 20pt" in large
+    # The dialog title at 1.36 of the base: 15 pt at 11, 27 pt at 20.
+    assert "QLabel#dialogTitle { font-size: 15pt;" in theme.dialog_stylesheet()
+    assert "QLabel#dialogTitle { font-size: 27pt;" in theme.dialog_stylesheet(base_pt=20)
+
+
+def test_apply_adds_the_dialog_rules_only_when_asked(qapp) -> None:  # type: ignore[no-untyped-def]
+    fonts = theme.load_fonts()
+    window, dialog = QWidget(), QWidget()
+    theme.apply(window, fonts)
+    theme.apply(dialog, fonts, dialog=True)
+    assert "QRadioButton" not in window.styleSheet()
+    assert dialog.styleSheet() == theme.stylesheet(fonts) + theme.dialog_stylesheet()
 
 
 def test_gold_icon_takes_the_colour(qapp) -> None:  # type: ignore[no-untyped-def]
@@ -57,7 +79,8 @@ def test_gold_icon_takes_the_colour(qapp) -> None:  # type: ignore[no-untyped-de
 def test_every_asset_is_packaged() -> None:
     for name in assets.UI_ICONS:
         assert (assets.ICONS_DIR / f"{name}.svg").is_file()
-    for path in (assets.BACKGROUND, assets.CORNER, assets.FLEURON, assets.EMBLEM):
+    for path in (assets.BACKGROUND, assets.CORNER_TOP, assets.CORNER_BOTTOM, assets.FLEURON,
+                 assets.EMBLEM, assets.LUDUCAT_LOGO, assets.DOSBOX_AUTOMATION_LOGO):
         assert path.is_file(), path
 
 
@@ -83,6 +106,8 @@ def test_svg_pixmap_refuses_broken_svg(qapp) -> None:  # type: ignore[no-untyped
 def test_stylesheet_refuses_empty_base(qapp, base_pt: int) -> None:  # type: ignore[no-untyped-def]
     with pytest.raises(ValueError):
         theme.stylesheet(theme.load_fonts(), base_pt=base_pt)
+    with pytest.raises(ValueError):
+        theme.dialog_stylesheet(base_pt=base_pt)
 
 
 def test_packaged_svgs_load_without_qt_warnings(qapp) -> None:  # type: ignore[no-untyped-def]
@@ -94,7 +119,7 @@ def test_packaged_svgs_load_without_qt_warnings(qapp) -> None:  # type: ignore[n
         if kind != QtMsgType.QtDebugMsg:
             warnings.append(message)
 
-    paths = [assets.CORNER, assets.FLEURON, assets.EMBLEM,
+    paths = [assets.FLEURON, assets.EMBLEM, assets.LUDUCAT_LOGO, assets.DOSBOX_AUTOMATION_LOGO,
              *(assets.ICONS_DIR / f"{name}.svg" for name in assets.UI_ICONS)]
     previous = qInstallMessageHandler(collect)
     try:
@@ -135,5 +160,59 @@ def test_buttons_are_painted_not_styled(qapp) -> None:  # type: ignore[no-untype
 
 
 def test_run_game_wears_the_ornament_gold() -> None:
-    # Stefan, 2026-11-16: the button in the same gold as the fleurons and the corner knots.
+    # The button in the same gold as the fleurons and the corner knots.
     assert (theme.GOLD_TOP, theme.GOLD_BOTTOM) == (theme.RAIL[1][0], theme.RAIL[2][0])
+
+
+def test_a_ticked_box_shows_the_checkmark(qapp) -> None:  # type: ignore[no-untyped-def]
+    # A tick in the gold box, not the gold alone.
+    from PySide6.QtCore import QPoint
+    from PySide6.QtGui import QColor, QImage
+
+    sheet = theme.dialog_stylesheet()
+    assert f'image: url("launcherart:{assets.CHECKMARK.name}")' in sheet
+    assert assets.CHECKMARK.is_file()
+
+    root = QWidget()
+    theme.apply(root, theme.load_fonts(), dialog=True)
+    box = QCheckBox("", root)
+    box.setChecked(True)
+    box.resize(24, 24)
+    root.resize(24, 24)
+    image = QImage(24, 24, QImage.Format.Format_ARGB32)
+    image.fill(QColor(theme.NIGHT))
+    root.render(image, QPoint())
+    inside = [QColor(image.pixel(x, y)).value() for x in range(3, 14) for y in range(4, 15)]
+    assert sum(v > 150 for v in inside) > 20, "the gold fill"
+    assert sum(v < 90 for v in inside) > 6, "the tick"
+
+
+@pytest.mark.parametrize("bad", ['/art/a"b.svg', "/art/a\nb.svg", "/art/a\\b.svg"])
+def test_a_stylesheet_url_refuses_a_file_name_that_would_break_it(bad: str) -> None:
+    from pathlib import Path
+
+    with pytest.raises(ValueError):
+        theme._qss_url(Path(bad))
+
+
+@pytest.mark.parametrize("folder", ['a "quoted" home', "back\\slash", "two\nlines"])
+def test_any_install_folder_reaches_the_checkmark(qapp, tmp_path, folder: str) -> None:  # type: ignore[no-untyped-def]
+    # A pip install under such a folder made every themed dialog fail to build.
+    from PySide6.QtCore import QFile
+
+    art = tmp_path / folder
+    art.mkdir()
+    (art / "check.svg").write_text("<svg/>", encoding="utf-8")
+    rule = theme._qss_url(art / "check.svg")
+    assert folder not in rule
+    assert QFile(rule[len('url("'):-len('")')]).exists()
+
+
+def test_the_checkmark_folder_is_registered_once(qapp, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from PySide6.QtCore import QDir
+
+    art = tmp_path / "art"
+    art.mkdir()
+    for _ in range(3):
+        theme._qss_url(art / "check.svg")
+    assert QDir.searchPaths("launcherart").count(str(art)) == 1

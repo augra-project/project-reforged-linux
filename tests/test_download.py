@@ -3,6 +3,7 @@
 # Additional terms under GPLv3 section 7(b): see NOTICE.
 #
 import hashlib
+import io
 import json
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -201,3 +202,37 @@ def test_no_validator_means_no_resume(tmp_path: Path) -> None:
 def test_bad_expectation(tmp_path: Path, expected: Expected) -> None:
     with pytest.raises(ValueError):
         download(FakeTransport(), URL, target(tmp_path), expected)
+
+
+def test_a_retry_after_python_cannot_read_is_no_wait(tmp_path: Path) -> None:
+    # Headers are Latin-1: a superscript two passes isdigit(), float() refuses it.
+    sleeps = Sleeps()
+    transport = FakeTransport(response(429, retry_after="\u00b2"), response(200, DATA, etag=ETAG))
+    assert run(tmp_path, transport, sleeps).read_bytes() == DATA
+    assert sleeps == [FIRST_PAUSE]
+
+
+class Stopped(BaseException):
+    pass
+
+
+class Trickle(io.BytesIO):
+    def read(self, size: int | None = -1) -> bytes:
+        return super().read(1000)
+
+
+def test_a_stop_in_the_progress_keeps_the_part(tmp_path: Path) -> None:
+    # The launcher's close stops a job at its next report; the next start resumes.
+    def stop_halfway(done: int, total: int) -> None:
+        if done >= SIZE // 2:
+            raise Stopped
+
+    with pytest.raises(Stopped):
+        download(FakeTransport(response(200, Trickle(DATA), etag=ETAG)), URL, target(tmp_path),
+                 EXPECTED, progress=stop_halfway, sleep=Sleeps(), clock=lambda: 1_000_000.0)
+    kept = (tmp_path / (target(tmp_path).name + ".part")).stat().st_size
+    assert SIZE // 2 <= kept < SIZE
+    transport = FakeTransport(response(206, DATA[kept:], etag=ETAG,
+                                       content_range=f"bytes {kept}-{SIZE - 1}/{SIZE}"))
+    assert run(tmp_path, transport).read_bytes() == DATA
+    assert transport.calls[0].headers["Range"] == f"bytes={kept}-"

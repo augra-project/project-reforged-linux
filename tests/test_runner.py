@@ -128,3 +128,37 @@ def test_exit_code(paths: AppPaths) -> None:
     popen.process.code = 0
     status = session.poll()
     assert not status.running and status.exit_code == 0
+
+
+def test_a_wineserver_that_does_not_answer_is_asked_once(paths: AppPaths) -> None:
+    # Each try held the window for 30 s; poll() must neither raise nor ask again.
+    import subprocess
+
+    tries: list[list[str]] = []
+
+    def hang(command: list[str], **kwargs: Any) -> None:
+        tries.append(command)
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    session = GameSession.start(RUNTIME, paths, USER, {"HOME": "/home/a"}, popen=FakePopen(),
+                                run=hang)
+    write_log(paths, GAVE_UP)
+    first, second = session.poll(), session.poll()
+    assert tries == [[str(RUNTIME.wineserver), "-k"]]
+    assert not first.stopped and not second.stopped and first.log.gave_up
+
+
+def test_an_unchanged_log_is_read_once(paths: AppPaths, monkeypatch: pytest.MonkeyPatch) -> None:
+    from project_reforged_linux import runner
+
+    reads: list[str] = []
+    real = runner.read_log
+    monkeypatch.setattr(runner, "read_log", lambda text: reads.append(text) or real(text))
+    session, _, _ = start(paths)
+    write_log(paths, FETCHING)
+    assert session.poll().log.art is Art.FETCHING
+    assert session.poll().log.art is Art.FETCHING
+    assert len(reads) == 1
+    write_log(paths, FETCHING + "00:01.000 Art: all 805 pictures up to date\r\n")
+    assert session.poll().log.art is Art.DONE
+    assert len(reads) == 2

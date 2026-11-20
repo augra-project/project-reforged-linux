@@ -2,6 +2,7 @@
 # License: GPL-3.0-or-later. Contact: project-reforged-linux@trinity2k.net
 # Additional terms under GPLv3 section 7(b): see NOTICE.
 #
+import http.client
 import socket
 import urllib.request
 
@@ -90,3 +91,27 @@ def test_no_hosts_is_an_error() -> None:
 
 def test_user_agent_names_only_the_launcher_and_version() -> None:
     assert USER_AGENT == f"project-reforged-linux/{__version__}"
+
+
+@pytest.mark.parametrize("error", [http.client.BadStatusLine("garbled"),
+                                   http.client.HTTPException("got more than 100 headers"),
+                                   http.client.LineTooLong("header line")])
+def test_a_broken_response_is_a_connection_error(error: Exception) -> None:
+    # Not an OSError: the update checks would let it through as a box.
+    class Opener:
+        def open(self, request: object, timeout: float) -> object:
+            raise error
+
+    net = Net(GAME_HOSTS)
+    net._opener = Opener()  # type: ignore[assignment]
+    with pytest.raises(ConnectionError, match="broken response"):
+        net.get("https://project-reforged.danwhelan.ie/update/win.json", {}, 5)
+
+
+@pytest.mark.parametrize("url", [
+    "https://[/a.zip",
+    "https://project-reforged.danwhelan.ie\uff20evil.example/",
+])
+def test_urls_urllib_cannot_split_are_refused(url: str) -> None:
+    with pytest.raises(HostRefused):
+        Net(GAME_HOSTS).check_url(url)

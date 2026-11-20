@@ -27,7 +27,7 @@ include = ["project_reforged_linux*"]
 
 [tool.setuptools.package-data]
 project_reforged_linux = ["data/icons/hicolor/*/apps/*", "data/fonts/*/*", "data/art/*",
-                          "data/ui-icons/*"]
+                          "data/ui-icons/*", "data/logos/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -39,6 +39,7 @@ filterwarnings = [
 markers = [
     "integration: tests that run Wine or the built image",
     "network: tests that may open connections (run by hand only)",
+    "modal: tests that open a modal dialog on purpose and answer it themselves",
 ]
 
 [tool.ruff]

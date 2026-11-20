@@ -106,7 +106,11 @@ class Net:
         return self._hosts
 
     def check_url(self, url: str) -> None:
-        parts = urlsplit(url)
+        try:
+            parts = urlsplit(url)
+        except ValueError as error:
+            logger.warning("refused an address urllib cannot split: %r", url)
+            raise HostRefused(f"not an allowed address: {url!r}") from error
         try:
             port = parts.port
         except ValueError:
@@ -126,6 +130,9 @@ class Net:
             raw = self._opener.open(request, timeout=timeout)
         except urllib.error.HTTPError as error:
             return Response(error.code, _lower(error.headers), _SafeBody(error))
+        except http.client.HTTPException as error:
+            # A garbled status line or oversized headers are no OSError; the callers catch those.
+            raise ConnectionError(f"broken response: {error!r}") from error
         return Response(raw.status, _lower(raw.headers), _SafeBody(raw))
 
 

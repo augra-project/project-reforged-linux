@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from project_reforged_linux.paths import AppPaths, ensure_dirs, resolve
+from project_reforged_linux.builds import Build
+from project_reforged_linux.paths import AppPaths, ensure_dirs, native_data_dir, resolve
 
 
 def test_resolve_follows_xdg(xdg_home: Path) -> None:
@@ -70,3 +71,25 @@ def test_app_paths_is_frozen(xdg_home: Path) -> None:
     paths: AppPaths = resolve()
     with pytest.raises(AttributeError):
         paths.data = Path("/elsewhere")  # type: ignore[misc]
+
+
+def test_each_build_has_its_own_folder(xdg_home: Path) -> None:
+    paths = resolve()
+    # The Windows folder stays where it always was, so an existing install keeps working.
+    assert paths.build_dir(Build.WINDOWS) == paths.game == paths.data / "game"
+    # His tarball unpacks to Shadowkey/, which must not land beside Shadowkey.exe's folder.
+    assert paths.build_dir(Build.LINUX_TARBALL) == paths.data / "linux"
+    assert paths.build_dir(Build.LINUX_APPIMAGE) == paths.data / "appimage"
+    assert len({paths.build_dir(b) for b in Build}) == 3
+
+
+def test_his_native_data_follows_xdg_data_home(tmp_path: Path) -> None:
+    data = tmp_path / "xdg-data"
+    assert native_data_dir({"XDG_DATA_HOME": str(data)}, tmp_path) == data / "Shadowkey"
+    assert native_data_dir({}, tmp_path) == tmp_path / ".local" / "share" / "Shadowkey"
+
+
+@pytest.mark.parametrize("value", ["", "relative/data"])
+def test_an_empty_or_relative_xdg_data_home_means_the_default(tmp_path: Path, value: str) -> None:
+    assert native_data_dir({"XDG_DATA_HOME": value}, tmp_path) == (
+        tmp_path / ".local" / "share" / "Shadowkey")

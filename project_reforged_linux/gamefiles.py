@@ -8,9 +8,13 @@ from pathlib import Path, PurePosixPath
 
 from kista.fileops import write_atomic
 
+from project_reforged_linux.builds import Build
+
 __all__ = [
     "LEVEL_FILES",
+    "SEARCH_DEPTH",
     "find_6r51",
+    "find_6r51_below",
     "missing_level_files",
     "to_wine_path",
     "validate",
@@ -51,13 +55,38 @@ def find_6r51(chosen: Path) -> Path | None:
     return _child_ci(apps, "6r51") if apps is not None else None
 
 
+# Deep enough for a dump wrapped in a folder or two: <wrap>/<card>/system/apps/6r51.
+SEARCH_DEPTH = 5
+
+
+def find_6r51_below(root: Path, depth: int = SEARCH_DEPTH) -> Path | None:
+    """The one 6R51 folder in a card tree, searched breadth first; links are not followed."""
+    if depth < 0:
+        raise ValueError(f"depth must not be negative, got {depth}")
+    level = [root]
+    for _ in range(depth + 1):
+        found = [d for d in level if d.name.lower() == "6r51"]
+        if len(found) > 1:
+            raise ValueError("more than one 6R51 folder in it")
+        if found:
+            return found[0]
+        level = sorted(c for d in level for c in d.iterdir()
+                       if c.is_dir() and not c.is_symlink())
+    return None
+
+
 def missing_level_files(folder: Path) -> list[str]:
     present = {p.name.lower() for p in folder.iterdir() if p.is_file()}
     return sorted(LEVEL_FILES - present)
 
 
 def validate(chosen: Path) -> Path:
-    """Return the 6R51 folder or fail with a message the player can act on."""
+    """Return the 6R51 folder or fail with a message the player can act on.
+
+    A file inside the card (game.id, a level file) stands for the folder it is in.
+    """
+    if chosen.is_file():
+        chosen = chosen.parent
     folder = find_6r51(chosen)
     if folder is None:
         raise FileNotFoundError(f"no 6R51 folder in {chosen}")
@@ -74,7 +103,20 @@ def to_wine_path(path: Path) -> str:
     return "Z:\\" + "\\".join(PurePosixPath(path).parts[1:])
 
 
-def write_game_folder_txt(port_dir: Path, folder: Path) -> None:
-    """Write the file his setup page writes, so the page never appears."""
-    content = to_wine_path(folder.resolve()) + "\r\n"
+def write_game_folder_txt(port_dir: Path, folder: Path, build: Build) -> None:
+    """Write the file his setup page writes, so the page never appears.
+
+    The Windows build reads a Z: path and CRLF, his Linux build the plain path and LF.
+    """
+    resolved = folder.resolve()
+    if any(c in str(resolved) for c in "\r\n"):
+        raise ValueError(f"a folder name with a line break cannot go into {GAME_FOLDER_TXT}")
+    if build is Build.WINDOWS and "\\" in str(resolved):
+        # Wine would read it as a folder separator in the Z: path.
+        raise ValueError(f"a folder name with a backslash cannot go into {GAME_FOLDER_TXT} "
+                         "for the Windows build")
+    if build is Build.WINDOWS:
+        content = to_wine_path(resolved) + "\r\n"
+    else:
+        content = f"{resolved}\n"
     write_atomic(port_dir / GAME_FOLDER_TXT, content.encode("utf-8"))

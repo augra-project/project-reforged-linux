@@ -4,14 +4,16 @@
 #
 """Where the launcher keeps its data, settings and downloads."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 import platformdirs
 
 from project_reforged_linux import APP_NAME
+from project_reforged_linux.builds import Build
 
-__all__ = ["AppPaths", "ensure_dirs", "resolve"]
+__all__ = ["AppPaths", "ensure_dirs", "native_data_dir", "native_port_dir", "resolve"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +26,15 @@ class AppPaths:
     @property
     def game(self) -> Path:
         return self.data / "game"
+
+    def build_dir(self, build: Build) -> Path:
+        """Where the launcher installs the build; Windows keeps its first folder, game/."""
+        return self.game if build is Build.WINDOWS else self.data / _BUILD_DIRS[build]
+
+    @property
+    def card(self) -> Path:
+        """The player's N-Gage card, unpacked from the zip they chose."""
+        return self.data / "ngage"
 
     @property
     def runtime(self) -> Path:
@@ -39,6 +50,21 @@ class AppPaths:
             raise ValueError(f"invalid Wine user name: {wine_user!r}")
         return (self.prefix / "drive_c" / "users" / wine_user / "AppData" / "Roaming"
                 / "Shadowkey" / "ShadowkeyPort")
+
+
+_BUILD_DIRS = {Build.LINUX_TARBALL: "linux", Build.LINUX_APPIMAGE: "appimage"}
+
+
+def native_data_dir(env: Mapping[str, str], home: Path) -> Path:
+    """His native build's folder; a relative XDG_DATA_HOME he would take below the current one."""
+    value = env.get("XDG_DATA_HOME", "")
+    base = Path(value) if value.startswith("/") else home / ".local" / "share"
+    return base / "Shadowkey"
+
+
+def native_port_dir(env: Mapping[str, str], home: Path) -> Path:
+    """His native build's settings, log, art and game_folder.txt."""
+    return native_data_dir(env, home) / "ShadowkeyPort"
 
 
 def resolve() -> AppPaths:

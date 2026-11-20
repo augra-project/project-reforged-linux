@@ -57,7 +57,9 @@ class GameSession:
         self._log_path = log_path
         self._before = before
         self._stop = stop
+        self._stop_tried = False
         self._stopped = False
+        self._last: tuple[tuple[int, int, int], LogState] | None = None
 
     @classmethod
     def start(cls, runtime: WineRuntime, paths: AppPaths, wine_user: str,
@@ -89,10 +91,15 @@ class GameSession:
 
     def poll(self) -> GameStatus:
         log = self._read_log()
-        if log.gave_up and not self._stopped:
+        if log.gave_up and not self._stop_tried:
             logger.warning("the game gave up starting (%s); ending Wine", log.problem)
-            self._stop()
-            self._stopped = True
+            # Tried once: a wineserver that does not answer would hold the window every poll.
+            self._stop_tried = True
+            try:
+                self._stop()
+                self._stopped = True
+            except (subprocess.TimeoutExpired, OSError) as error:
+                logger.warning("Wine could not be ended: %s", error)
         code = self._process.poll()
         return GameStatus(code is None, code, log, self._stopped)
 
@@ -100,6 +107,10 @@ class GameSession:
         now = _snapshot(self._log_path)
         if now is None or now == self._before:
             return LogState()
+        if self._last is not None and self._last[0] == now:
+            return self._last[1]
         with self._log_path.open("rb") as handle:
             raw = handle.read(_LOG_LIMIT)
-        return read_log(raw.decode("utf-8", errors="replace"))
+        state = read_log(raw.decode("utf-8", errors="replace"))
+        self._last = (now, state)
+        return state

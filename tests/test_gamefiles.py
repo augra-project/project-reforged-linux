@@ -6,9 +6,11 @@ from pathlib import Path
 
 import pytest
 
+from project_reforged_linux.builds import Build
 from project_reforged_linux.gamefiles import (
     LEVEL_FILES,
     find_6r51,
+    find_6r51_below,
     missing_level_files,
     to_wine_path,
     validate,
@@ -110,7 +112,7 @@ def test_write_game_folder_txt_format(tmp_path: Path) -> None:
     port = tmp_path / "ShadowkeyPort"
     port.mkdir()
     folder = make_6r51(tmp_path / "card")
-    write_game_folder_txt(port, folder)
+    write_game_folder_txt(port, folder, Build.WINDOWS)
     data = (port / "game_folder.txt").read_bytes()
     assert data == to_wine_path(folder).encode("utf-8") + b"\r\n"
     assert not data.startswith(b"\xef\xbb\xbf")
@@ -120,6 +122,67 @@ def test_write_game_folder_txt_non_ascii(tmp_path: Path) -> None:
     port = tmp_path / "ShadowkeyPort"
     port.mkdir()
     folder = make_6r51(tmp_path / "Zoë's café games")
-    write_game_folder_txt(port, folder)
+    write_game_folder_txt(port, folder, Build.WINDOWS)
     text = (port / "game_folder.txt").read_bytes().decode("utf-8")
     assert "Zoë's café games" in text
+
+
+@pytest.mark.parametrize("build", [Build.LINUX_TARBALL, Build.LINUX_APPIMAGE])
+def test_the_native_build_gets_the_plain_path(tmp_path: Path, build: Build) -> None:
+    # his Linux build reads the absolute path and a newline.
+    port = tmp_path / "ShadowkeyPort"
+    port.mkdir()
+    folder = make_6r51(tmp_path / "Zoë's card")
+    write_game_folder_txt(port, folder, build)
+    assert (port / "game_folder.txt").read_bytes().decode("utf-8") == f"{folder.resolve()}\n"
+
+
+@pytest.mark.parametrize("build", list(Build))
+def test_a_folder_name_that_breaks_the_line_is_refused(tmp_path: Path, build: Build) -> None:
+    port = tmp_path / "ShadowkeyPort"
+    port.mkdir()
+    folder = make_6r51(tmp_path / "two\nlines")
+    with pytest.raises(ValueError, match="line"):
+        write_game_folder_txt(port, folder, build)
+    assert not (port / "game_folder.txt").exists()
+
+
+def test_a_file_inside_the_card_stands_for_its_folder(tmp_path: Path) -> None:
+    folder = make_6r51(tmp_path / "card" / "system" / "apps")
+    (tmp_path / "card" / "game.id").write_bytes(b"id")
+    assert validate(tmp_path / "card" / "game.id") == folder
+    assert validate(next(folder.glob("*.zmp"))) == folder
+
+
+def test_find_below_reaches_a_wrapped_card(tmp_path: Path) -> None:
+    folder = make_6r51(tmp_path / "Shadowkey (2004)" / "card" / "system" / "apps")
+    assert find_6r51_below(tmp_path) == folder
+    assert find_6r51_below(tmp_path, depth=3) is None
+
+
+def test_find_below_refuses_two_cards(tmp_path: Path) -> None:
+    make_6r51(tmp_path / "a" / "system" / "apps")
+    make_6r51(tmp_path / "b" / "system" / "apps")
+    with pytest.raises(ValueError):
+        find_6r51_below(tmp_path)
+
+
+def test_find_below_does_not_follow_links(tmp_path: Path) -> None:
+    make_6r51(tmp_path / "elsewhere" / "system" / "apps")
+    (tmp_path / "card").mkdir()
+    (tmp_path / "card" / "system").symlink_to(tmp_path / "elsewhere" / "system")
+    assert find_6r51_below(tmp_path / "card") is None
+    with pytest.raises(ValueError):
+        find_6r51_below(tmp_path, depth=-1)
+
+
+def test_a_backslash_cannot_go_into_the_wine_path(tmp_path: Path) -> None:
+    # Wine would read a\\..\\..\\other as a walk up out of the card.
+    port = tmp_path / "ShadowkeyPort"
+    port.mkdir()
+    folder = make_6r51(tmp_path / "cards" / "a\\..\\..\\other")
+    with pytest.raises(ValueError, match="backslash"):
+        write_game_folder_txt(port, folder, Build.WINDOWS)
+    assert not (port / "game_folder.txt").exists()
+    write_game_folder_txt(port, folder, Build.LINUX_TARBALL)  # a plain name for his Linux build
+    assert "\\" in (port / "game_folder.txt").read_text(encoding="utf-8")

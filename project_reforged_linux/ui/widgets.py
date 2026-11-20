@@ -7,29 +7,74 @@
 import logging
 from enum import Enum
 
-from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QPainter, QPaintEvent
+from PySide6.QtCore import QByteArray, QRectF, QSize, Qt
+from PySide6.QtGui import QPainter, QPaintEvent, QResizeEvent
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
 
 from project_reforged_linux.ui import theme
 from project_reforged_linux.ui.assets import FLEURON, icon_pixmap
 from project_reforged_linux.ui.bezel import SMALL, BezelButton
 
-__all__ = ["Fleuron", "State", "StatusRow"]
+__all__ = ["ElidedLabel", "Fleuron", "State", "StatusRow"]
 
 logger = logging.getLogger(__name__)
 
 ICON_SIZE = 26
 FLEURON_HEIGHT = 40
+# The traced ornament's own colours, mapped onto the guardians' gold.
+FLEURON_GOLD = {b"#3E1C07": theme.AGED_DARK, b"#A56209": theme.AGED_MID,
+                b"#DFA034": theme.AGED_LIGHT, b"#E0A134": theme.AGED_LIGHT}
+
+
+def _fleuron_svg() -> bytes:
+    data = FLEURON.read_bytes()
+    for traced, aged in FLEURON_GOLD.items():
+        data = data.replace(traced, aged.encode())
+    return data
 
 
 class State(Enum):
-    """Check first, then a tick or a cross; never a question mark (Stefan, 2026-11-16)."""
+    """Check first, then a tick, a cross or an update; never a question mark."""
 
     CHECKING = ("", "")  # no symbol yet
     OK = ("circle-check", theme.STATE_OK)
     ERROR = ("circle-x", theme.STATE_ERROR)
+    UPDATE = ("circle-arrow-up", theme.STATE_UPDATE)
+    # Dimmed, no symbol: the row does not apply now. Its own value, or Enum makes it an
+    # alias of CHECKING.
+    NOT_NEEDED = ("", theme.TEXT_DIM)
+
+
+class ElidedLabel(QLabel):
+    """A right-aligned label that shortens its text in the middle when the row runs out."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._full = ""
+        self.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+    def set_full_text(self, text: str) -> None:
+        self._full = text
+        self._elide()
+
+    def full_text(self) -> str:
+        return self._full
+
+    def _elide(self) -> None:
+        self.setText(self.fontMetrics().elidedText(self._full, Qt.TextElideMode.ElideMiddle,
+                                                   max(self.width(), 0)))
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        return QSize(0, super().minimumSizeHint().height())
+
+    def sizeHint(self) -> QSize:  # noqa: N802 (Qt's name)
+        return QSize(self.fontMetrics().horizontalAdvance(self._full),
+                     super().sizeHint().height())
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 (Qt's name)
+        super().resizeEvent(event)
+        self._elide()
 
 
 class StatusRow(QWidget):
@@ -44,7 +89,7 @@ class StatusRow(QWidget):
         self._icon.setFixedSize(ICON_SIZE, ICON_SIZE)
         self._title = QLabel(title)
         self._title.setObjectName("statusText")
-        self._detail = QLabel("")
+        self._detail = ElidedLabel()
         self._detail.setObjectName("statusDetail")
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
@@ -62,15 +107,21 @@ class StatusRow(QWidget):
     def set_state(self, state: State, detail: str, *, tooltip: str = "") -> None:
         self.state = state
         name, colour = state.value
-        if state is State.CHECKING:
+        if state in (State.CHECKING, State.NOT_NEEDED):
             self._icon.clear()
         else:
             self._icon.setPixmap(icon_pixmap(name, colour, ICON_SIZE, self.devicePixelRatioF()))
-        self._detail.setText(detail)
+        self._detail.set_full_text(detail)
         self.setToolTip(tooltip)
+        if state is State.NOT_NEEDED:
+            fade = QGraphicsOpacityEffect(self)
+            fade.setOpacity(theme.DISABLED_OPACITY)
+            self.setGraphicsEffect(fade)
+        else:
+            self.setGraphicsEffect(None)  # Qt deletes the previous effect
 
     def detail_text(self) -> str:
-        return self._detail.text()
+        return self._detail.full_text()
 
 
 class Fleuron(QWidget):
@@ -81,7 +132,10 @@ class Fleuron(QWidget):
             raise ValueError(f"a fleuron points left or right, not {points}")
         super().__init__(parent)
         self._points = points
-        self._renderer = QSvgRenderer(str(FLEURON))
+        try:
+            self._renderer = QSvgRenderer(QByteArray(_fleuron_svg()))
+        except OSError:
+            self._renderer = QSvgRenderer()
         box = self._renderer.viewBoxF()
         if not self._renderer.isValid() or box.height() <= 0:
             logger.error("fleuron ornament missing or unreadable: %s", FLEURON)

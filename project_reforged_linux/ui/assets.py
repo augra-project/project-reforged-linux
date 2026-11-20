@@ -13,18 +13,25 @@ from PySide6.QtSvg import QSvgRenderer
 
 from project_reforged_linux import APP_ID
 
-__all__ = ["BACKGROUND", "CORNER", "EMBLEM", "FLEURON", "FONTS_DIR", "ICONS_DIR", "UI_ICONS",
+__all__ = ["BACKGROUND", "CHECKMARK", "CORNER_BOTTOM", "CORNER_TOP", "DOSBOX_AUTOMATION_LOGO",
+           "EMBLEM", "FLEURON", "FONTS_DIR", "ICONS_DIR", "LUDUCAT_LOGO", "UI_ICONS",
            "icon_pixmap", "icon_svg", "svg_pixmap"]
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 FONTS_DIR = DATA / "fonts"
 ICONS_DIR = DATA / "ui-icons"
 BACKGROUND = DATA / "art" / "background.jpg"
-CORNER = DATA / "art" / "corner.svg"
+# The Dragon Guardians: drawn for the left side, mirrored to the right.
+CORNER_TOP = DATA / "art" / "corner-top.png"
+CORNER_BOTTOM = DATA / "art" / "corner-bottom.png"
 FLEURON = DATA / "art" / "fleuron.svg"
+CHECKMARK = DATA / "art" / "check.svg"
 EMBLEM = DATA / "icons" / "hicolor" / "scalable" / "apps" / f"{APP_ID}.svg"
+# Our sister projects' own application icons, copied unchanged.
+LUDUCAT_LOGO = DATA / "logos" / "luducat.svg"
+DOSBOX_AUTOMATION_LOGO = DATA / "logos" / "dosbox-automation.svg"
 UI_ICONS = ("house", "settings", "info", "power", "key-round", "circle-check",
-            "circle-question-mark", "circle-x", "folder-open")
+            "circle-question-mark", "circle-x", "circle-arrow-up", "folder-open")
 _HEX_COLOUR = re.compile(r"#[0-9a-fA-F]{6}")
 
 

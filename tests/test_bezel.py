@@ -6,7 +6,7 @@ import math
 
 import pytest
 from PySide6.QtCore import QPoint, QRectF, Qt
-from PySide6.QtGui import QColor, QImage, QPainter, QRegion
+from PySide6.QtGui import QColor, QFont, QImage, QPainter, QRegion
 from PySide6.QtWidgets import QPushButton, QWidget
 
 from project_reforged_linux.ui import theme
@@ -172,7 +172,7 @@ def middle_of_the_gold(style) -> float:  # type: ignore[no-untyped-def]
 
 @pytest.mark.parametrize("style", [LEATHER, PANEL])
 def test_the_gold_is_lit_from_above(qapp, monkeypatch, style) -> None:  # type: ignore[no-untyped-def]
-    # Stefan, 2026-11-16: worked metal; the light alone, without the grain.
+    # Worked metal; the light alone, without the grain.
     from project_reforged_linux.ui import bezel
 
     monkeypatch.setattr(bezel, "GRAIN_OPACITY", 0.0)
@@ -198,3 +198,64 @@ def test_the_grain_is_the_same_every_time(qapp) -> None:  # type: ignore[no-unty
     first = bezel._grain().copy()
     bezel._grain.cache_clear()
     assert bezel._grain() == first
+
+
+def ink_rows(image: QImage, style, dark: int = 250) -> list[int]:  # type: ignore[no-untyped-def]
+    """Rows inside the frame, across the middle third, that hold dark text ink."""
+    edge = math.ceil(style.thickness) + 1
+    third = image.width() // 3
+    return [y for y in range(edge, image.height() - edge)
+            if any(light(image.pixelColor(x, y)) < dark for x in range(third, 2 * third))]
+
+
+@pytest.mark.parametrize("point_size", [12, 21, 30])
+def test_capitals_sit_in_the_middle(qapp, point_size: int) -> None:  # type: ignore[no-untyped-def]
+    # RUN GAME sat low; centred by its capitals, not by
+    # the font's box, whose descender room pushes the letters up or down.
+    button = BezelButton("RUN GAME", style=GOLD)
+    font = QFont(theme.load_fonts().heading)  # the face RUN GAME wears in the window
+    font.setPointSize(point_size)
+    font.setBold(True)
+    button.setFont(font)
+    button.resize(button.sizeHint().width() + 20, GOLD.height)
+    rows = ink_rows(on_night(button), GOLD)
+    assert rows, "no text ink found"
+    middle = (rows[0] + rows[-1] + 1) / 2
+    assert abs(middle - GOLD.height / 2) <= 1.0, (rows[0], rows[-1])
+
+
+@pytest.mark.parametrize("style", [LEATHER, GOLD])
+def test_hover_shows_but_does_not_glare(qapp, style) -> None:  # type: ignore[no-untyped-def]
+    # Visible on the leather but no glare: 10 percent toward the gold lifts the fill by about
+    # 49 on leather and 13 on gold.
+    normal, hovered = bezel_image(style), bezel_image(style, hovered=True)
+    fill = light(at(hovered, 60, 20)) - light(at(normal, 60, 20))
+    low, high = (40, 80) if style is LEATHER else (10, 22)
+    assert low <= fill <= high, fill
+    gold = middle_of_the_gold(style)
+    frame = light(at(hovered, 60, gold)) - light(at(normal, 60, gold))
+    assert 20 < frame < 70, frame
+
+
+def test_a_disabled_button_does_not_answer_the_mouse(qapp, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # Qt sets WA_UnderMouse on Enter whether the widget is enabled or not (qapplication.cpp,
+    # notify_helper), so a greyed button would light up without its own check.
+    from project_reforged_linux.ui import bezel
+
+    seen: list[bool] = []
+    real = bezel.paint_bezel
+
+    def spy(*args, hovered: bool = False, **kwargs):  # type: ignore[no-untyped-def]
+        seen.append(hovered)
+        real(*args, hovered=hovered, **kwargs)
+
+    monkeypatch.setattr(bezel, "paint_bezel", spy)
+    monkeypatch.setattr(BezelButton, "underMouse", lambda self: True)
+    button = BezelButton("Options")
+    button.resize(button.sizeHint())
+    button.render(QImage(button.size(), QImage.Format.Format_ARGB32), QPoint(), QRegion(),
+                  QWidget.RenderFlag.DrawChildren)
+    button.setEnabled(False)
+    button.render(QImage(button.size(), QImage.Format.Format_ARGB32), QPoint(), QRegion(),
+                  QWidget.RenderFlag.DrawChildren)
+    assert seen == [True, False]

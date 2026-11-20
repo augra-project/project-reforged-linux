@@ -13,7 +13,8 @@ from project_reforged_linux.net import Transport
 
 __all__ = ["RELEASES_URL", "UpdateCheckError", "latest_release", "newer_launcher"]
 
-RELEASES_URL = ("https://api.github.com/repos/augra-project/project-reforged-linux/"
+# The repository's current name; its older names only redirect.
+RELEASES_URL = ("https://api.github.com/repos/augra-project/project-reforged-linux-launcher/"
                 "releases/latest")
 _MAX_BYTES = 256 * 1024
 _TAG = re.compile(r"^v?(\d+(?:\.\d+){1,3})$")
@@ -38,7 +39,7 @@ def latest_release(transport: Transport, *, timeout: float = 15.0) -> str | None
         raise UpdateCheckError("GitHub's answer is larger than expected")
     try:
         data = json.loads(raw)
-    except ValueError as error:
+    except (ValueError, RecursionError) as error:
         raise UpdateCheckError("GitHub sent something that is not JSON") from error
     tag = data.get("tag_name") if isinstance(data, dict) else None
     match = _TAG.match(tag) if isinstance(tag, str) else None

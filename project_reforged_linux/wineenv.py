@@ -7,6 +7,8 @@
 from collections.abc import Mapping
 from pathlib import Path
 
+from project_reforged_linux.hostenv import host_env
+
 __all__ = ["build_env", "clean_env"]
 
 # Anything here could change which DLLs load or how Wine behaves behind our back.
@@ -19,8 +21,8 @@ _DLL_OVERRIDES = "mscoree=;mshtml="
 
 
 def clean_env(base: Mapping[str, str]) -> dict[str, str]:
-    """The session's environment without anything that steers Wine or the loader."""
-    return {k: v for k, v in base.items()
+    """The session's environment without our AppImage's and without what steers Wine."""
+    return {k: v for k, v in host_env(base).items()
             if not k.startswith(_CLEARED_PREFIXES) and k not in _CLEARED_NAMES}
 
 

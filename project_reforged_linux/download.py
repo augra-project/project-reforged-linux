@@ -56,7 +56,7 @@ def _meta_path(part: Path) -> Path:
 def _load_meta(part: Path, url: str) -> dict[str, str | None]:
     try:
         meta = json.loads(_meta_path(part).read_text(encoding="utf-8"))
-    except (FileNotFoundError, ValueError):
+    except (FileNotFoundError, ValueError, RecursionError):
         return {}
     return meta if isinstance(meta, dict) and meta.get("url") == url else {}
 
@@ -77,7 +77,8 @@ def _retry_after(value: str | None, now: float) -> float | None:
     if not value:
         return None
     value = value.strip()
-    if value.isdigit():
+    # Headers come in as Latin-1, where a superscript two passes isdigit() but not float().
+    if value.isascii() and value.isdigit():
         return float(value)
     try:
         when = email.utils.parsedate_to_datetime(value)
