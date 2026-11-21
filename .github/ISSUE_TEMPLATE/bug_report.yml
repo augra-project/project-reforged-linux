@@ -1,0 +1,55 @@
+# This file is part of the project-reforged-linux Project.
+# License: GPL-3.0-or-later. Contact: project-reforged-linux@trinity2k.net
+# Additional terms under GPLv3 section 7(b): see NOTICE.
+#
+name: Launcher problem
+description: The launcher does not start, install, update or run the game as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. This is for problems with the launcher. If the game
+        starts and then misbehaves inside, Dan Whelan's message board is the better place.
+  - type: input
+    id: version
+    attributes:
+      label: Launcher version
+      description: The first line of `project-reforged-linux-launcher-*.AppImage --version`, or the version in About.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and desktop
+      description: For example "Ubuntu 24.04, GNOME on Wayland" or "Linux Mint 22, Cinnamon on X11".
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Which build of the game
+      description: Shown in the launcher's window and in Options.
+      options:
+        - Linux AppImage
+        - Linux tarball
+        - Windows build through Wine
+        - I don't know
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Please attach `launcher.log` from `~/.local/state/project-reforged-linux/logs/`
+        (drag the file into this box). It writes your home folder as `~`.
+    validations:
+      required: false

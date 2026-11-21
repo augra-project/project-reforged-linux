@@ -4,10 +4,10 @@ License: GPL-3.0-or-later. Contact: project-reforged-linux@trinity2k.net
 Project Reforged Linux Launcher
 Copyright (c) 2026 The Augra Project
 
-Additional terms under section 7(b) of the GNU General Public License,
+Additional terms under section 7 of the GNU General Public License,
 version 3. Anyone who conveys this program or a work based on it, modified or
-not, must keep the following notices, both in the README (or the work's
-equivalent) and in the credits or About page the program shows:
+not, must keep notices 1 and 2, both in the README (or the work's equivalent)
+and in the credits or About page the program shows, and must follow item 3:
 
 1. Attribution
 
@@ -21,3 +21,9 @@ equivalent) and in the credits or About page the program shows:
    The original N-Gage game files of The Elder Scrolls Travels: Shadowkey
    belong to ZeniMax Media Inc. They are not part of this program, and this
    license grants no rights to them. Every player brings their own copy.
+
+3. Changed versions
+
+   A changed version must say that it is changed, and must not present itself
+   as this launcher or as coming from the Augra Project. The names and logos of
+   the launcher and of the Augra Project are not licensed with the code.

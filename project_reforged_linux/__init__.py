@@ -11,7 +11,7 @@ APP_ID = "io.github.augra_project.ProjectReforgedLinux"
 # Sjáandi part number; a release appends its date, -YYYYMMDD.
 PART_NUMBER = "SJ-PRG-2004"
 # The release appends its day to the part number (the scheme); set when a release is cut.
-RELEASE_DATE = "20261116"
+RELEASE_DATE = "20261121"
 __version__ = "1.0.0"
 
 __all__ = ["APP_ID", "APP_NAME", "GAME_NAME", "LAUNCHER_NAME", "PART_NUMBER", "RELEASE_DATE",

@@ -1,0 +1,9 @@
+# This file is part of the project-reforged-linux Project.
+# License: GPL-3.0-or-later. Contact: project-reforged-linux@trinity2k.net
+# Additional terms under GPLv3 section 7(b): see NOTICE.
+#
+blank_issues_enabled: false
+contact_links:
+  - name: Questions about the game itself
+    url: https://project-reforged.danwhelan.ie/board/
+    about: Project Reforged is Dan Whelan's game. Gameplay, bugs inside the game and his builds belong on his message board.

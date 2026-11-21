@@ -82,7 +82,7 @@ NOTICE_TEXT = (
     "Shadowkey belong to ZeniMax Media Inc. They are not part of this program, and this "
     "license grants no rights to them. Every player brings their own copy. This launcher is not "
     "affiliated with them, and the game is neither distributed nor bundled with it.</p>")
-# What ships, in THIRD_PARTY_LICENSES.txt's words; Wine joins that file with the bundle.
+# What ships, in THIRD_PARTY_LICENSES.txt's words.
 LICENSES = (
     ("Qt for Python (PySide6)", "LGPL-3.0-only"),
     ("Wine (bundled runtime)", "LGPL-2.1-or-later"),
@@ -92,6 +92,7 @@ LICENSES = (
     ("sjaandi-kista", "GPL-3.0-or-later"),
     ("Logos: luducat, dosbox-automation", "GPL-3.0+, GPL-2.0+"),
     ("Progress line, adapted from luducat", "GPL-3.0-or-later"),
+    ("AppImage runtime libraries", "PSF, Apache, MIT, BSD, MPL, LGPL"),
 )
 LOGOS = (
     (LUDUCAT_LOGO, LUDUCAT_HOME,

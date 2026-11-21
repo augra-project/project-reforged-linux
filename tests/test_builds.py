@@ -16,7 +16,7 @@ NO_VULKAN = NativeCheck(glibc=(2, 41), vulkan=False, curl=True, fuse=True)
 def test_labels_for_the_game_row() -> None:
     assert Build.LINUX_APPIMAGE.value == "Linux AppImage"
     assert Build.LINUX_TARBALL.value == "Linux tarball"  # as Options names it
-    assert Build.WINDOWS.value == "Windows"
+    assert Build.WINDOWS.value == "Windows build"
 
 
 def test_keys_round_trip_and_unknown_keys_fail() -> None:
@@ -76,10 +76,10 @@ def test_nothing_chosen_takes_the_best_that_runs(check: NativeCheck, build: Buil
 def test_a_chosen_build_that_cannot_run_gives_way_with_a_note() -> None:
     assert effective_build(Build.LINUX_APPIMAGE, OLD) == (
         Build.WINDOWS, "Linux AppImage is chosen but cannot run here: The Linux builds need "
-                       "glibc 2.35; this system has 2.28. Windows runs instead.")
+                       "glibc 2.35; this system has 2.28. Windows build runs instead.")
     assert effective_build(Build.LINUX_TARBALL, NO_VULKAN) == (
         Build.WINDOWS, "Linux tarball is chosen but cannot run here: No Vulkan driver loader "
-                       "(libvulkan.so.1). Windows runs instead.")
+                       "(libvulkan.so.1). Windows build runs instead.")
     # Without FUSE only the AppImage fails: the tarball is the best that runs.
     build, note = effective_build(Build.LINUX_APPIMAGE, NO_FUSE)
     assert build is Build.LINUX_TARBALL and note is not None and "No FUSE" in note

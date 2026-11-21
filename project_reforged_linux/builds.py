@@ -19,7 +19,7 @@ class Build(Enum):
 
     LINUX_APPIMAGE = "Linux AppImage"
     LINUX_TARBALL = "Linux tarball"
-    WINDOWS = "Windows"
+    WINDOWS = "Windows build"
 
     @property
     def key(self) -> str:

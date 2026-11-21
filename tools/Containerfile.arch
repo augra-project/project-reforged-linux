@@ -1,0 +1,16 @@
+# This file is part of the project-reforged-linux Project.
+# License: GPL-3.0-or-later. Contact: project-reforged-linux@trinity2k.net
+# Additional terms under GPLv3 section 7(b): see NOTICE.
+#
+# Build host for the AppImage: an up-to-date Arch Linux, as quick-sharun expects.
+# The X11, Wayland and font libraries are there so that dependency tracing resolves
+# PySide6's Qt plugins; no system Qt, no GTK and no Mesa drivers are installed.
+FROM docker.io/library/archlinux:latest
+
+RUN pacman -Syu --noconfirm --needed \
+        base-devel binutils curl desktop-file-utils file git patchelf python strace xz zstd \
+        dbus fontconfig freetype2 krb5 libglvnd libice libsm libx11 libxcb libxext libxi \
+        libxkbcommon libxkbcommon-x11 libxrender openssl wayland xcb-util-cursor \
+        xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm \
+    && rm -rf /var/cache/pacman/pkg/* \
+    && git config --system --add safe.directory '*'

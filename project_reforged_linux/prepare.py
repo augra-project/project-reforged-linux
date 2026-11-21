@@ -255,7 +255,7 @@ def _fetch_build(paths: AppPaths, transport: Transport, build: Build,
                  progress: Progress) -> Manifest:
     progress(Step.MANIFEST, None, None)
     manifest = fetch_manifest(transport, paths.cache, build)
-    logger.info("his %s build: v%s from %s, %d bytes", build.value, manifest.version,
+    logger.info("%s: v%s from %s, %d bytes", build.value, manifest.version,
                 manifest.url, manifest.size)
     progress(Step.DOWNLOAD, 0, manifest.size)
     archive = download(transport, manifest.url, paths.cache / manifest.filename,
@@ -356,7 +356,7 @@ def _configure_native(paths: AppPaths, settings: LauncherSettings, build: Build,
     if settings.game_files:
         folder = validate(Path(settings.game_files))
         write_game_folder_txt(port, folder, build)
-        logger.info("game files %s for his %s build", home_as_tilde(folder), build.value)
+        logger.info("game files %s for %s", home_as_tilde(folder), build.value)
 
 
 def latest_game_version(paths: AppPaths, transport: Transport, build: Build) -> str:

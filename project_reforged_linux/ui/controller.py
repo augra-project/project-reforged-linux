@@ -356,7 +356,7 @@ class LauncherController(QObject):
                                tuple[Checked | None, Checked | None]]) -> None:
             (self.native_check, self._build, self.build_note, self.resolved,
              self.status, self._probed) = result
-            logger.info("his %s build%s", self._build.value,
+            logger.info("build: %s%s", self._build.value,
                         f" ({self.build_note})" if self.build_note else "")
             if self.build_note and self._closing_note is None:
                 self._closing_note = self.build_note

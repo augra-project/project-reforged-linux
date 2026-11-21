@@ -89,5 +89,5 @@ def find_wine_user(prefix: Path) -> str:
     names = sorted(p.name for p in users.iterdir()
                    if p.is_dir() and p.name.lower() != "public") if users.is_dir() else []
     if len(names) != 1:
-        raise PrefixError(f"expected one user folder in {users}, found {names}")
+        raise PrefixError(f"expected one user folder in {users}, found {len(names)}")
     return names[0]

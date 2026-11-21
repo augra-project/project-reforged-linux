@@ -71,7 +71,7 @@ def test_rows_follow_the_status(window: MainWindow) -> None:
     window.show_status(Status(True, "0.2.33", True, Path("/card/6r51"), None, CHECKED, None,
                               None))
     assert window.rows["game"].state is State.OK
-    assert window.rows["game"].detail_text() == "Windows v0.2.33"
+    assert window.rows["game"].detail_text() == "Windows build v0.2.33"
     assert window.rows["files"].state is State.OK
     assert window.rows["files"].detail_text() == "/card/6r51"
     assert window.rows["files"].toolTip() == "/card/6r51"

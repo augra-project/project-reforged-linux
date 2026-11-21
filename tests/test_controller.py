@@ -261,7 +261,7 @@ def test_the_log_tells_the_story_without_the_home_folder(qapp, paths: AppPaths, 
         c.check_game_update()
         c.install()
     text = caplog.text
-    assert "status: game Windows v0.2.46" in text and "~/games/ngage-files" in text
+    assert "status: game Windows build v0.2.46" in text and "~/games/ngage-files" in text
     assert "his current build: v0.2.46" in text
     assert "Update Reforged: Project Reforged is up to date (v0.2.46)." in text
     assert str(Path.home()) not in text

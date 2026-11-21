@@ -153,8 +153,12 @@ ROWS = {
     "Logos: luducat, dosbox-automation": ["luducat application icon (About dialog, unchanged)",
                                           "dosbox-automation application icon (About dialog, "
                                           "unchanged)"],
-    # The bundled Wine gets its entry with the bundle.
-    "Wine (bundled runtime)": [],
+    "Wine (bundled runtime)": ["Wine (bundled runtime, unmodified)"],
+    "AppImage runtime libraries": [
+        "Python (AppImage runtime)", "OpenSSL (AppImage runtime)",
+        "Python packages used by sjaandi-kista (AppImage runtime)",
+        "sharun, uruntime, cross-libc-dlopen (AppImage runtime)",
+        "System libraries (AppImage runtime)"],
 }
 
 

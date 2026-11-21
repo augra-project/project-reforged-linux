@@ -1,0 +1,19 @@
+# This file is part of the project-reforged-linux Project.
+# License: GPL-3.0-or-later. Contact: project-reforged-linux@trinity2k.net
+# Additional terms under GPLv3 section 7(b): see NOTICE.
+#
+# Every package the image ships, at the versions the test suite ran against
+# (pip freeze of the test venv); tools/build.sh installs exactly these.
+brotli==1.2.1
+certifi==2026.10.23
+charset-normalizer==3.5.2
+idna==3.20
+pathvalidate==3.3.1
+platformdirs==4.14.5
+PySide6==6.11.3
+PySide6_Addons==6.11.3
+PySide6_Essentials==6.11.3
+requests==2.34.2
+shiboken6==6.11.3
+sjaandi-kista==0.9.0
+urllib3==2.8.0

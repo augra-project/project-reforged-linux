@@ -153,6 +153,66 @@ def test_the_home_folder_never_reaches_the_log_file(tmp_path: Path, root_restore
     assert "~/.config/s.json" in text and "~/data/x" in text
 
 
+
+def test_the_login_never_reaches_the_log_file(tmp_path: Path, root_restored: None,
+                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "home" / "alice"))
+    for name in ("LOGNAME", "USER", "LNAME", "USERNAME"):
+        monkeypatch.setenv(name, "alice")
+    path = setup_logging(tmp_path / "state", crash_trace=False)
+    log = logging.getLogger("project_reforged_linux.savesync")
+    log.info("saves taken from %s: game1",
+             tmp_path / "home" / "alice" / "prefix" / "drive_c" / "users" / "alice" / "Saves")
+    log.info("in /srv/drive_c/users/bob, then (drive_c/users/bob) and drive_c/users/Public,")
+    log.info("/mnt/alice/x and /mnt/alicea/x; alice and alice.cfg stay as they are")
+    text = path.read_text(encoding="utf-8")
+    assert "~/prefix/drive_c/users/<user>/Saves" in text
+    assert "drive_c/users/<user>, then (drive_c/users/<user>) and drive_c/users/Public," in text
+    assert "/mnt/<user>/x and /mnt/alicea/x; alice and alice.cfg stay as they are" in text
+
+
+
+def test_paths_end_at_punctuation_and_in_windows_form(tmp_path: Path, root_restored: None,
+                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "home" / "a.smith"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(logsetup.getpass, "getuser", lambda: "asmith")
+    path = setup_logging(tmp_path / "state", crash_trace=False)
+    log = logging.getLogger("project_reforged_linux.runner")
+    log.warning("could not read %s: denied (%s)", home, home)
+    log.warning(r"couldn't start C:\users\asmith\AppData and Z:\home\asmith\games")
+    log.info("files on /media/asmith/usb, Public in C:\\users\\Public\\x")
+    text = path.read_text(encoding="utf-8")
+    assert "a.smith" not in text and "asmith" not in text
+    assert "could not read ~: denied (~)" in text
+    assert r"C:\users\<user>\AppData and Z:\home\<user>\games" in text
+    assert "/media/<user>/usb" in text and "C:\\users\\Public\\x" in text
+
+
+@pytest.mark.parametrize("login", ["user", "build", "system"])
+def test_a_common_word_as_login_leaves_the_words_alone(tmp_path: Path, root_restored: None,
+                                                       monkeypatch: pytest.MonkeyPatch,
+                                                       login: str) -> None:
+    monkeypatch.setattr(logsetup.getpass, "getuser", lambda: login)
+    path = setup_logging(tmp_path / "state", crash_trace=False)
+    logging.getLogger("project_reforged_linux.x").info(
+        "build: Windows build with system wine in /p/drive_c/users/%s/Saves", login)
+    text = path.read_text(encoding="utf-8")
+    assert "build: Windows build with system wine in /p/drive_c/users/<user>/Saves" in text
+
+
+@pytest.mark.parametrize("error", [KeyError("uid"), OSError("no login"), ImportError("pwd")])
+def test_no_login_to_find_still_writes_the_log(tmp_path: Path, root_restored: None,
+                                               monkeypatch: pytest.MonkeyPatch,
+                                               error: Exception) -> None:
+    def no_login() -> str:
+        raise error
+    monkeypatch.setattr(logsetup.getpass, "getuser", no_login)
+    path = setup_logging(tmp_path / "state", crash_trace=False)
+    logging.getLogger("project_reforged_linux.x").info("still here in drive_c/users/bob/x")
+    assert "still here in drive_c/users/<user>/x" in path.read_text(encoding="utf-8")
+
+
 def test_an_exception_no_one_caught_lands_in_the_log(tmp_path: Path, root_restored: None) -> None:
     # A slot's exception reaches only sys.excepthook; from the desktop, nothing else sees it.
     path = setup_logging(tmp_path / "state", crash_trace=False)

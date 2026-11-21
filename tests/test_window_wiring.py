@@ -149,14 +149,14 @@ def test_a_newer_build_turns_the_row_orange(qapp, paths: AppPaths, tmp_path: Pat
     window = checked_window(paths, tmp_path, lambda p, t, b: "0.2.46")
     row = window.rows["game"]
     assert row.state is State.UPDATE
-    assert row.detail_text() == "Windows v0.2.33 (v0.2.46)"
+    assert row.detail_text() == "Windows build v0.2.33 (v0.2.46)"
     assert "0.2.46" in row.toolTip()
 
 
 def test_the_same_build_stays_green(qapp, paths: AppPaths, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
     window = checked_window(paths, tmp_path, lambda p, t, b: "0.2.33")
     assert window.rows["game"].state is State.OK
-    assert window.rows["game"].detail_text() == "Windows v0.2.33"
+    assert window.rows["game"].detail_text() == "Windows build v0.2.33"
 
 
 def test_a_failed_check_is_a_tooltip_not_a_box(qapp, paths: AppPaths, tmp_path: Path,  # type: ignore[no-untyped-def]

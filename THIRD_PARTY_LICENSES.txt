@@ -9,6 +9,12 @@ The launcher itself is GPL-3.0-or-later. It ships or uses the components below
 under their own licences. Each font folder and the icon folder also carry their
 original licence file next to the files they cover.
 
+The launcher's own artwork (the background, the corner and fleuron ornaments and
+the check mark in project_reforged_linux/data/art/, and the application icon in
+project_reforged_linux/data/icons/) is original to the Augra Project and part of
+the launcher under its GPL-3.0-or-later. It contains nothing from the original
+game or from Dan Whelan's port.
+
 ================================================================================
 COMPONENTS
 ================================================================================
@@ -65,6 +71,50 @@ luducat (progress line painting, adapted)
     Copyright (c) shakeyourbunny and luducat contributors
     GPL-3.0-or-later
     File: project_reforged_linux/ui/progress.py
+
+Wine (bundled runtime, unmodified)
+    https://www.winehq.org
+    Copyright (c) the Wine project authors
+    LGPL-2.1-or-later
+    The build is Kron4ek's vanilla WoW64 build of the Wine 11.0 release
+    (https://github.com/Kron4ek/Wine-Builds, build scripts MIT). Its source is the
+    Wine 11.0 release: https://dl.winehq.org/wine/source/11.0/
+    Files in the AppImage: opt/wine/
+
+Python (AppImage runtime)
+    https://www.python.org
+    Copyright (c) Python Software Foundation
+    Python Software Foundation License 2.0
+
+OpenSSL (AppImage runtime)
+    https://www.openssl.org
+    Copyright (c) the OpenSSL Project Authors
+    Apache License 2.0
+
+Python packages used by sjaandi-kista (AppImage runtime)
+    requests (https://requests.readthedocs.io), Apache License 2.0
+    urllib3 (https://github.com/urllib3/urllib3), MIT License
+    idna (https://github.com/kjd/idna), BSD-3-Clause
+    certifi (https://github.com/certifi/python-certifi), MPL-2.0
+    charset-normalizer (https://github.com/jawah/charset_normalizer), MIT License
+    Brotli (https://github.com/google/brotli), MIT License
+    pathvalidate (https://github.com/thombashi/pathvalidate), MIT License
+    Each package's own license file is in its .dist-info folder in the AppImage.
+
+sharun, uruntime, cross-libc-dlopen (AppImage runtime)
+    https://github.com/pkgforge-dev/Anylinux-sharun
+    https://github.com/VHSgunzo/uruntime
+    https://github.com/pkgforge-dev/cross-libc-dlopen
+    Copyright (c) VHSgunzo and the pkgforge-dev contributors
+    MIT License
+
+System libraries (AppImage runtime)
+    The AppImage carries the system libraries the launcher needs (among them the
+    GNU C Library, LGPL-2.1-or-later), taken from Arch Linux packages with their
+    debug symbols stripped, each under its own license. SYSTEM-LIBRARIES.txt at
+    the top of the AppImage names the package and version of each one
+    (--appimage-extract shows it); their sources are on
+    https://archlinux.org/packages/ under those names.
 
 ================================================================================
 SIL OPEN FONT LICENSE 1.1
@@ -187,11 +237,13 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ================================================================================
 MIT LICENSE
 ================================================================================
-Used by: platformdirs, and the Feather-derived Lucide icons (info, power, circle-arrow-up)
+Used by: platformdirs, the Feather-derived Lucide icons (info, power, circle-arrow-up),
+sharun, uruntime and cross-libc-dlopen
 
-The MIT License (MIT) (for the icons listed above)
+The MIT License (MIT)
 
-Copyright (c) 2013-present Cole Bemis
+Copyright (c) 2013-present Cole Bemis (the Feather icons; the other
+components' copyright lines are in their entries above)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -218,3 +270,26 @@ Used by: Qt for Python (PySide6)
 
 The full text is at https://www.gnu.org/licenses/lgpl-3.0.txt and comes with
 every PySide6 installation.
+
+================================================================================
+GNU LESSER GENERAL PUBLIC LICENSE 2.1
+================================================================================
+Used by: Wine, the GNU C Library
+
+The full text is at https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt; the
+Wine source release carries it as COPYING.LIB.
+
+================================================================================
+PYTHON SOFTWARE FOUNDATION LICENSE 2.0
+================================================================================
+Used by: Python
+
+The full text is at https://docs.python.org/3/license.html and comes with the
+Python in the AppImage as shared/lib/python3.*/LICENSE.txt.
+
+================================================================================
+APACHE LICENSE 2.0
+================================================================================
+Used by: OpenSSL
+
+The full text is at https://www.apache.org/licenses/LICENSE-2.0.txt.
