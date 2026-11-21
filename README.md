@@ -95,9 +95,11 @@ can back it up or remove it without hunting:
 - `~/.cache/project-reforged-linux/`: the downloaded builds
 - `~/.local/state/project-reforged-linux/logs/`: the log files
 
-To remove the launcher, delete the AppImage and these folders; keep
-`~/.local/share/Shadowkey/` if you want to keep your saves. If you let it add a
-menu entry, Options removes that again.
+To remove the launcher, first remove its menu entry in Options if you added one.
+Then delete the AppImage and these folders. Your saves are in
+`~/.local/share/Shadowkey/` for Dan's Linux builds and in
+`~/.local/share/project-reforged-linux/prefix/drive_c/users/<your user name>/AppData/Roaming/Shadowkey/`
+for his Windows build; copy them somewhere first if you want to keep them.
 
 ## What it connects to
 
